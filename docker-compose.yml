@@ -42,7 +42,7 @@ services:
     container_name: contacthub_frontend
     build:
       context: ./client
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.local
     restart: unless-stopped
     ports:
       - "3000:80"
