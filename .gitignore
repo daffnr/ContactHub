@@ -3,7 +3,7 @@ node_modules/
 client/node_modules/
 server/node_modules/
 
-# Local Environment Variables
+# Local Environment Variables – never commit these!
 .env
 .env.local
 server/.env
@@ -26,3 +26,6 @@ yarn-error.log*
 # Prisma / SQLite Temporary Files
 /server/prisma/dev.db
 /server/prisma/dev.db-journal
+
+# Docker – local MySQL volume (if bind-mounted)
+mysql-data/

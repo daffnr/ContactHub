@@ -1,0 +1,28 @@
+# ─────────────────────────────────────────────────────
+#  client/.dockerignore
+# ─────────────────────────────────────────────────────
+
+# Dependencies – reinstalled inside container
+node_modules/
+
+# Built output – rebuilt inside container
+dist/
+
+# Local env files
+.env
+.env.*
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
