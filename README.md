@@ -68,8 +68,8 @@ A highly-scalable, production-ready full-stack contact management application bu
 ### 1. Database Setup
 1. Configure your database connection in `server/.env`:
    ```env
-   DATABASE_URL="mysql://root:password@127.0.0.1:3307/contact_app"
-   JWT_SECRET="supersecret_jwt_key_2026_modern_saas"
+   DATABASE_URL="mysql://your_username:your_password@127.0.0.1:3307/contact_app"
+   JWT_SECRET="your_jwt_secret_key"
    PORT=5000
    ```
 2. Navigate to the `/server` folder and push your schema models:
