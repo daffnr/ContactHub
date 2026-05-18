@@ -27,5 +27,5 @@ yarn-error.log*
 /server/prisma/dev.db
 /server/prisma/dev.db-journal
 
-# Docker – local MySQL volume (if bind-mounted)
-mysql-data/
+# Docker – local PostgreSQL volume (if bind-mounted)
+postgres-data/

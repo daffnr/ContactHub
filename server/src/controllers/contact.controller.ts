@@ -22,9 +22,9 @@ export const getContacts = async (req: Request, res: Response, next: NextFunctio
 
     if (search) {
       where.OR = [
-        { name: { contains: search as string } },
-        { email: { contains: search as string } },
-        { phone: { contains: search as string } },
+        { name: { contains: search as string, mode: "insensitive" } },
+        { email: { contains: search as string, mode: "insensitive" } },
+        { phone: { contains: search as string, mode: "insensitive" } },
       ];
     }
 
