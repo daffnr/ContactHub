@@ -1,70 +1,91 @@
-# Getting Started with Create React App
+# Full-Stack SaaS Contact Manager Monorepo
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A highly-scalable, production-ready full-stack contact management application built with a decoupled monorepo architecture. Featuring a premium glassmorphic dark-mode client dashboard, secure JWT authentication, and a robust relational Express backend with Prisma ORM and MySQL.
 
-## Available Scripts
+## 🚀 Key Features
 
-In the project directory, you can run:
+- **Decoupled Monorepo Architecture**: Clean separation between the React client and the Node.js server.
+- **Secure Authentication**: Register, login, and session retention (`/auth/me`) powered by **JSON Web Tokens (JWT)** and **bcrypt** password hashing.
+- **Optimized Contacts CRM**: Full CRUD contact cards featuring search, filtering by favorites, and database-level server-side pagination.
+- **Debounced Search**: Highly optimized frontend search requests using debouncing hooks to minimize database hits.
+- **Glassmorphism Design & Micro-Animations**: Sleek SaaS visual aesthetic tailored with tailored Tailwind HSL color tokens and fluid Framer Motion transitions.
+- **Decoupled Relational Constraints**: Schema structure featuring cascading deletions (`onDelete: Cascade`) for relational integrity between users and owned contacts.
 
-### `yarn start`
+---
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## 📂 Repository Structure
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+```text
+├── client/                     # Frontend Workspace (Vite + React + TS)
+│   ├── src/
+│   │   ├── components/         # Reusable atomic UI (Buttons, Inputs, Modals, Skeletons)
+│   │   ├── context/            # Global Contexts (AuthContext, ToastContext)
+│   │   ├── pages/              # Views (Dashboard, Login, Register)
+│   │   ├── services/           # Axios Interceptor with JWT injection
+│   │   └── utils/              # Tailwind class mixers (clsx + tailwind-merge)
+│   └── tailwind.config.js      # Styling tokens & glassmorphism configurations
+│
+└── server/                     # Backend Workspace (Node.js + Express + TS)
+    ├── src/
+    │   ├── controllers/        # Core API logic controllers (Auth, Contacts CRUD)
+    │   ├── middlewares/        # JWT Verification, global error catcher, Zod validators
+    │   ├── routes/             # Modular Express router mappings
+    │   └── types/              # Express Request namespace overrides (express.d.ts)
+    ├── prisma/
+    │   └── schema.prisma       # MySQL database models
+    └── .env                    # Credentials & JWT Secrets
+```
 
-### `yarn test`
+---
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## 📡 API Endpoints Specification
 
-### `yarn build`
+### Authentication Route (`/api/auth`)
+| Method | Endpoint | Description | Protected |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/register` | Register a new user account | No |
+| `POST` | `/login` | Authenticate and obtain JWT token | No |
+| `GET` | `/me` | Fetch active user credentials from session | Yes |
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Contacts Route (`/api/contacts`)
+| Method | Endpoint | Description | Protected |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/` | Fetch all user owned contacts (supports search, favorites, & pagination) | Yes |
+| `POST` | `/` | Create a new contact card | Yes |
+| `GET` | `/:id` | Fetch details of a single contact | Yes |
+| `PUT` | `/:id` | Update details of a contact | Yes |
+| `DELETE` | `/:id` | Remove a contact (triggers cascade deletion) | Yes |
+| `PATCH` | `/:id/favorite` | Toggle the favorite status of a contact | Yes |
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 🛠️ Quick Start Guide
 
-### `yarn eject`
+### Prerequisites
+- Node.js (v18+)
+- MySQL Server (e.g., XAMPP, Laragon, or standalone MySQL Instance)
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+### 1. Database Setup
+1. Configure your database connection in `server/.env`:
+   ```env
+   DATABASE_URL="mysql://root:password@127.0.0.1:3307/contact_app"
+   JWT_SECRET="supersecret_jwt_key_2026_modern_saas"
+   PORT=5000
+   ```
+2. Navigate to the `/server` folder and push your schema models:
+   ```bash
+   cd server
+   npx prisma db push
+   ```
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `yarn build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### 2. Launch Dev Environment
+Install `concurrently` at the root of the project to boot both workspaces in a single terminal call:
+1. **Install root monorepo runner**:
+   ```bash
+   npm install
+   ```
+2. **Launch Client & Server in parallel**:
+   ```bash
+   npm run dev
+   ```
+   *The client dev console is now accessible at `http://localhost:3000` and the Express backend is running on `http://localhost:5000`.*
