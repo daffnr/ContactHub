@@ -13,6 +13,7 @@ import { Header } from '../components/organisms/Header';
 import { ContactFormModal } from '../components/organisms/ContactFormModal';
 import { ConfirmDeleteModal } from '../components/organisms/ConfirmDeleteModal';
 import { DashboardTemplate } from '../components/templates/DashboardTemplate';
+import { WelcomeHero } from '../components/molecules/WelcomeHero';
 import { AnalyticsCards } from '../components/molecules/AnalyticsCards';
 import { RecentActivity } from '../components/molecules/RecentActivity';
 import { ContactDrawer } from '../components/organisms/ContactDrawer';
@@ -295,7 +296,16 @@ export const Dashboard: React.FC = () => {
             onAddContact={() => { setEditingContact(null); setIsContactModalOpen(true); }}
           />
         }
-        analytics={<AnalyticsCards stats={data?.stats} />}
+        analytics={
+          <div className="flex flex-col gap-6">
+            <WelcomeHero 
+              stats={data?.stats} 
+              onAddContact={() => { setEditingContact(null); setIsContactModalOpen(true); }}
+              onExport={handleExportCSV}
+            />
+            <AnalyticsCards stats={data?.stats} />
+          </div>
+        }
         toolbar={renderToolbar()}
         content={renderContent()}
         recentActivity={<RecentActivity activities={activityData || []} />}
