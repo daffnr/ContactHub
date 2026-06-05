@@ -11,24 +11,55 @@ const saveContactsToStorage = (contacts: any[]) => {
   localStorage.setItem('contacts', JSON.stringify(contacts));
 };
 
+const getActivitiesFromStorage = (): any[] => {
+  const data = localStorage.getItem('activities');
+  if (!data) return [];
+  return JSON.parse(data);
+};
+
+const saveActivity = (type: string, contactId: number, contactName: string) => {
+  const activities = getActivitiesFromStorage();
+  const newActivity = {
+    id: Date.now(),
+    type,
+    contactId,
+    contactName,
+    date: new Date().toISOString()
+  };
+  activities.unshift(newActivity);
+  // keep only last 50 activities to save space
+  localStorage.setItem('activities', JSON.stringify(activities.slice(0, 50)));
+};
+
 const api = {
   get: async (url: string, config?: any) => {
     await delay(300);
     if (url === '/contacts') {
       let contacts = getContactsFromStorage();
-      const { search, favorite, page = 1, limit = 6 } = config?.params || {};
+      const { search, favorite, tags, page = 1, limit = 6 } = config?.params || {};
       
       if (search) {
         const lowerSearch = search.toLowerCase();
         contacts = contacts.filter((c: any) => 
           c.name.toLowerCase().includes(lowerSearch) ||
           (c.email && c.email.toLowerCase().includes(lowerSearch)) ||
-          (c.phone && c.phone.toLowerCase().includes(lowerSearch))
+          (c.phone && c.phone.toLowerCase().includes(lowerSearch)) ||
+          (c.company && c.company.toLowerCase().includes(lowerSearch))
         );
       }
 
       if (favorite === 'true') {
         contacts = contacts.filter((c: any) => c.favorite);
+      }
+
+      if (tags) {
+        // tags could be a comma-separated string or array
+        const tagsArray = Array.isArray(tags) ? tags : tags.split(',');
+        if (tagsArray.length > 0) {
+          contacts = contacts.filter((c: any) => 
+            c.tags && c.tags.some((tag: string) => tagsArray.includes(tag))
+          );
+        }
       }
 
       const total = contacts.length;
@@ -39,9 +70,17 @@ const api = {
       return {
         data: {
           contacts: paginated,
-          pagination: { total, totalPages, page, limit }
+          pagination: { total, totalPages, page, limit },
+          stats: {
+            totalContacts: getContactsFromStorage().length,
+            totalFavorites: getContactsFromStorage().filter((c:any) => c.favorite).length,
+            totalCompanies: new Set(getContactsFromStorage().map((c:any) => c.company).filter(Boolean)).size,
+          }
         }
       };
+    }
+    if (url === '/activities') {
+      return { data: getActivitiesFromStorage().slice(0, 5) };
     }
     return { data: {} };
   },
@@ -51,11 +90,16 @@ const api = {
       const contacts = getContactsFromStorage();
       const newContact = {
         ...data,
+        company: data.company || null,
+        tags: data.tags || [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         id: Date.now()
       };
       // Insert at the beginning so newer ones show up first
       contacts.unshift(newContact);
       saveContactsToStorage(contacts);
+      saveActivity('CREATED', newContact.id, newContact.name);
       return { data: newContact };
     }
   },
@@ -66,8 +110,15 @@ const api = {
       let contacts = getContactsFromStorage();
       const index = contacts.findIndex(c => c.id === id);
       if (index > -1) {
-        contacts[index] = { ...contacts[index], ...data };
+        contacts[index] = { 
+          ...contacts[index], 
+          ...data,
+          company: data.company || null,
+          tags: data.tags || [],
+          updatedAt: new Date().toISOString()
+        };
         saveContactsToStorage(contacts);
+        saveActivity('UPDATED', id, contacts[index].name);
         return { data: contacts[index] };
       }
       return Promise.reject({ response: { data: { message: 'Not found' } } });
@@ -78,8 +129,12 @@ const api = {
     if (url.startsWith('/contacts/')) {
       const id = parseInt(url.split('/').pop() || '0');
       let contacts = getContactsFromStorage();
-      contacts = contacts.filter(c => c.id !== id);
-      saveContactsToStorage(contacts);
+      const contact = contacts.find(c => c.id === id);
+      if (contact) {
+        contacts = contacts.filter(c => c.id !== id);
+        saveContactsToStorage(contacts);
+        saveActivity('DELETED', id, contact.name);
+      }
       return { data: { success: true } };
     }
   },
@@ -91,7 +146,9 @@ const api = {
       const index = contacts.findIndex(c => c.id === id);
       if (index > -1) {
         contacts[index].favorite = !contacts[index].favorite;
+        contacts[index].updatedAt = new Date().toISOString();
         saveContactsToStorage(contacts);
+        saveActivity(contacts[index].favorite ? 'FAVORITED' : 'UNFAVORITED', id, contacts[index].name);
         return { data: contacts[index] };
       }
       return Promise.reject({ response: { data: { message: 'Not found' } } });

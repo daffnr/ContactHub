@@ -1,5 +1,6 @@
 import React from 'react';
 import { Users, Star, X } from 'lucide-react';
+import { Logo } from '../atoms/Logo';
 
 interface SidebarProps {
   isSidebarOpen: boolean;
@@ -24,12 +25,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     >
       {/* Brand */}
       <div className="h-16 px-6 border-b border-slate-100 dark:border-slate-800/40 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-primary-600 to-primary-500 shadow flex items-center justify-center text-white font-extrabold text-sm">
-            C
-          </div>
-          <span className="font-bold text-slate-950 dark:text-slate-50 tracking-tight">ContactHub</span>
-        </div>
+        <Logo />
         <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-1 text-slate-400">
           <X size={18} />
         </button>

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../context/ToastContext';
 import { useDebounce } from '../hooks/useDebounce';
+import { useDarkMode } from '../hooks/useDarkMode';
+import { exportToCSV } from '../utils/export';
 import api from '../services/api';
 import { ContactSkeleton } from '../components/atoms/Skeleton';
 import { Button } from '../components/atoms/Button';
@@ -11,19 +13,17 @@ import { Header } from '../components/organisms/Header';
 import { ContactFormModal } from '../components/organisms/ContactFormModal';
 import { ConfirmDeleteModal } from '../components/organisms/ConfirmDeleteModal';
 import { DashboardTemplate } from '../components/templates/DashboardTemplate';
-import { Search, Compass, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AnalyticsCards } from '../components/molecules/AnalyticsCards';
+import { RecentActivity } from '../components/molecules/RecentActivity';
+import { ContactDrawer } from '../components/organisms/ContactDrawer';
+import { EmptyState } from '../components/molecules/EmptyState';
+import { Search, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Dashboard: React.FC = () => {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
-
-  // Theme
-  const [darkMode, setDarkMode] = useState(false);
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark');
-  };
+  const { darkMode, toggleDarkMode } = useDarkMode();
 
   // State Management
   const [search, setSearch] = useState('');
@@ -32,14 +32,16 @@ export const Dashboard: React.FC = () => {
   const [page, setPage] = useState(1);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Modal States
+  // Modal & Drawer States
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingContactId, setDeletingContactId] = useState<number | null>(null);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Fetch Contacts
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError } = useQuery<any>({
     queryKey: ['contacts', debouncedSearch, filterFavorite, page],
     queryFn: async () => {
       const res = await api.get('/contacts', {
@@ -54,11 +56,21 @@ export const Dashboard: React.FC = () => {
     },
   });
 
+  // Fetch Activities
+  const { data: activityData } = useQuery<any>({
+    queryKey: ['activities'],
+    queryFn: async () => {
+      const res = await api.get('/activities');
+      return res.data;
+    },
+  });
+
   // Mutations
   const createMutation = useMutation({
     mutationFn: (newContact: any) => api.post('/contacts', newContact),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
       showToast('success', 'Contact created successfully!');
       setIsContactModalOpen(false);
     },
@@ -70,11 +82,15 @@ export const Dashboard: React.FC = () => {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) =>
       api.put(`/contacts/${id}`, data),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
       showToast('success', 'Contact updated successfully!');
       setIsContactModalOpen(false);
       setEditingContact(null);
+      if (selectedContact?.id === res?.data?.id) {
+        setSelectedContact(res?.data);
+      }
     },
     onError: (err: any) => {
       showToast('error', err.response?.data?.message || 'Failed to update contact.');
@@ -85,9 +101,14 @@ export const Dashboard: React.FC = () => {
     mutationFn: (id: number) => api.delete(`/contacts/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
       showToast('success', 'Contact deleted successfully.');
       setIsDeleteModalOpen(false);
       setDeletingContactId(null);
+      if (selectedContact?.id === deletingContactId) {
+        setIsDrawerOpen(false);
+        setSelectedContact(null);
+      }
     },
     onError: (err: any) => {
       showToast('error', err.response?.data?.message || 'Failed to delete contact.');
@@ -96,8 +117,12 @@ export const Dashboard: React.FC = () => {
 
   const favoriteMutation = useMutation({
     mutationFn: (id: number) => api.patch(`/contacts/${id}/favorite`),
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      if (selectedContact?.id === res?.data?.id) {
+        setSelectedContact(res?.data);
+      }
     },
     onError: () => {
       showToast('error', 'Failed to toggle favorite.');
@@ -123,26 +148,42 @@ export const Dashboard: React.FC = () => {
     setIsDeleteModalOpen(true);
   };
 
+  const handleOpenDrawer = (contact: Contact) => {
+    setSelectedContact(contact);
+    setIsDrawerOpen(true);
+  };
+
+  const handleExportCSV = () => {
+    const allContacts = localStorage.getItem('contacts');
+    if (allContacts) {
+      exportToCSV(JSON.parse(allContacts));
+      showToast('success', 'CSV Exported Successfully');
+    }
+  };
+
   // Render Parts
   const renderToolbar = () => (
-    <div className="flex flex-col sm:flex-row gap-3">
-      <div className="relative flex-1">
+    <div className="flex flex-col sm:flex-row gap-3 items-center w-full">
+      <div className="relative flex-1 w-full">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
         <input
           type="text"
-          placeholder="Search by name, email, phone..."
+          placeholder="Search by name, email, phone or company..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           className="w-full pl-10 pr-4 py-2.5 text-sm glass-input placeholder:text-slate-400 dark:placeholder:text-slate-600"
         />
       </div>
+      <Button variant="secondary" onClick={handleExportCSV} className="shrink-0 flex items-center gap-2 text-sm w-full sm:w-auto">
+        <Download size={16} /> Export CSV
+      </Button>
     </div>
   );
 
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
             <ContactSkeleton key={i} />
           ))}
@@ -160,37 +201,20 @@ export const Dashboard: React.FC = () => {
     }
 
     if (!data?.contacts || data.contacts.length === 0) {
-      return (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex-1 glass-card p-12 flex flex-col items-center justify-center text-center gap-4"
-        >
-          <div className="h-16 w-16 rounded-2xl bg-primary-50 dark:bg-primary-950/20 flex items-center justify-center text-primary-500">
-            <Compass size={32} />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">No contacts discovered</h3>
-            <p className="text-sm text-slate-400 mt-1 dark:text-slate-500 max-w-sm">
-              {search || filterFavorite
-                ? 'No records match your active search filters. Try refining your queries.'
-                : "You haven't archived any contacts yet. Begin adding data points to populate your SaaS dashboard."}
-            </p>
-          </div>
-          {!(search || filterFavorite) && (
-            <Button onClick={() => { setEditingContact(null); setIsContactModalOpen(true); }} size="sm">
-              Create First Contact
-            </Button>
-          )}
-        </motion.div>
-      );
+      if (search) {
+        return <EmptyState type="NO_SEARCH_RESULTS" searchQuery={search} onAction={() => setSearch('')} />;
+      }
+      if (filterFavorite) {
+        return <EmptyState type="NO_FAVORITES" />;
+      }
+      return <EmptyState type="NO_CONTACTS" onAction={() => setIsContactModalOpen(true)} />;
     }
 
     return (
       <div className="flex-1 flex flex-col gap-6">
         <motion.div
           layout
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4"
         >
           <AnimatePresence mode="popLayout">
             {data?.contacts?.map((contact: Contact) => (
@@ -198,8 +222,7 @@ export const Dashboard: React.FC = () => {
                 key={contact.id}
                 contact={contact}
                 onFavorite={(id) => favoriteMutation.mutate(id)}
-                onEdit={handleOpenEdit}
-                onDelete={handleOpenDelete}
+                onClick={handleOpenDrawer}
               />
             ))}
           </AnimatePresence>
@@ -207,7 +230,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Pagination */}
         {data?.pagination && data.pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-slate-100 pt-4 dark:border-slate-900">
+          <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-auto dark:border-slate-900">
             <span className="text-xs text-slate-400">
               Showing {(page - 1) * 6 + 1} -{' '}
               {Math.min(page * 6, data.pagination.total)} of{' '}
@@ -272,8 +295,10 @@ export const Dashboard: React.FC = () => {
             onAddContact={() => { setEditingContact(null); setIsContactModalOpen(true); }}
           />
         }
+        analytics={<AnalyticsCards stats={data?.stats} />}
         toolbar={renderToolbar()}
         content={renderContent()}
+        recentActivity={<RecentActivity activities={activityData || []} />}
       />
 
       <ContactFormModal
@@ -289,6 +314,15 @@ export const Dashboard: React.FC = () => {
         onClose={() => { setIsDeleteModalOpen(false); setDeletingContactId(null); }}
         onConfirm={() => deletingContactId && deleteMutation.mutate(deletingContactId)}
         isLoading={deleteMutation.isPending}
+      />
+
+      <ContactDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        contact={selectedContact}
+        onEdit={handleOpenEdit}
+        onDelete={handleOpenDelete}
+        onFavorite={(id) => favoriteMutation.mutate(id)}
       />
     </>
   );
